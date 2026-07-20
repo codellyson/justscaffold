@@ -1,0 +1,69 @@
+# Cheap by design: install, typecheck, build, test. The generator tests write
+# to a temp dir and never shell out to npm, so this stays under a minute.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
+
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+  # Guards the thing unit tests can't: that a generated project actually
+  # installs and compiles. Matrixed so a break points at one template.
+  generated:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - template: lib
+            features: vitest,github-actions,release-script
+          - template: cli
+            features: vitest,github-actions
+          - template: mcp
+            features: vitest,docker
+          - template: api
+            features: auth,vitest,docker,github-actions
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
+      - run: npm run build
+
+      - name: Generate
+        run: node dist/index.js new sample -t ${{ matrix.template }} -f ${{ matrix.features }} -y --dir /tmp/sample
+
+      - name: Install and build the generated project
+        working-directory: /tmp/sample
+        run: |
+          npm install
+          npm run build
+          npm test --if-present

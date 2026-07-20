@@ -1,0 +1,38 @@
+{
+  "name": "justscaffold",
+  "version": "0.1.0",
+  "description": "Scaffold apps from composable templates and opt-in feature modules.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "justscaffold": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "tsc -p tsconfig.json",
+    "release": "bash scripts/release.sh"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "citty": "^0.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "packageManager": "pnpm@10.0.0"
+}

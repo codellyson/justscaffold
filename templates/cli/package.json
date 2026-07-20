@@ -1,0 +1,30 @@
+{
+  "name": "__PKG_NAME__",
+  "version": "0.1.0",
+  "description": "__PKG_DESCRIPTION__",
+  "type": "module",
+  "bin": {
+    "__BIN_NAME__": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "citty": "^0.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
