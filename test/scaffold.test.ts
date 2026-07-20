@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { scaffold } from "../src/core/apply.js";
 import { ScaffoldError } from "../src/core/errors.js";
+import { isBinaryPath, templatesRoot } from "../src/core/fs-utils.js";
 import { featuresForTemplate } from "../src/core/resolve.js";
 import { listTemplates } from "../src/registry.js";
 import type { ScaffoldContext, TemplateId } from "../src/core/types.js";
@@ -55,6 +56,7 @@ describe.each(listTemplates())("template: $id", (template) => {
     );
 
     for (const file of await walk(dir)) {
+      if (isBinaryPath(file)) continue;
       const contents = await fs.readFile(file, "utf8");
       const rel = path.relative(dir, file);
       expect(contents, `${rel} has an unsubstituted token`).not.toMatch(/__[A-Z_]+__/);
@@ -109,6 +111,66 @@ describe("features", () => {
     const pkg = JSON.parse(await read(dir, "package.json"));
     const keys = Object.keys(pkg.devDependencies);
     expect(keys).toEqual([...keys].sort());
+  });
+});
+
+describe("tauri", () => {
+  it("copies the icon byte-for-byte", async () => {
+    const dir = await generate("tauri", []);
+    const generated = await fs.readFile(path.join(dir, "src-tauri/icons/icon.png"));
+    const original = await fs.readFile(path.join(templatesRoot(), "tauri/src-tauri/icons/icon.png"));
+    expect(generated.equals(original)).toBe(true);
+    // A utf8 round-trip would mangle the header rather than shortening the file.
+    expect(generated.subarray(0, 8)).toEqual(
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    );
+  });
+
+  // tauri-build fails on Windows without an .ico, regardless of what
+  // bundle.icon lists. Shipping only a .png silently breaks every Windows build.
+  it("ships a Windows .ico alongside the PNGs", async () => {
+    const dir = await generate("tauri", []);
+    const ico = await fs.readFile(path.join(dir, "src-tauri/icons/icon.ico"));
+    expect(ico.readUInt16LE(0)).toBe(0); // reserved
+    expect(ico.readUInt16LE(2)).toBe(1); // type: icon
+    expect(ico.readUInt16LE(4)).toBeGreaterThan(0); // at least one image
+
+    const conf = JSON.parse(await read(dir, "src-tauri/tauri.conf.json"));
+    expect(conf.bundle.icon).toContain("icons/icon.ico");
+  });
+
+  it("derives a Rust-safe crate name from a scoped package name", async () => {
+    const dir = await generate("tauri", [], "@acme/my-cool-app");
+    const cargo = await read(dir, "src-tauri/Cargo.toml");
+    expect(cargo).toContain('name = "my_cool_app"');
+    expect(cargo).toContain('name = "my_cool_app_lib"');
+    const mainRs = await read(dir, "src-tauri/src/main.rs");
+    expect(mainRs).toContain("my_cool_app_lib::run()");
+  });
+
+  it("bumps all three version files in the release script", async () => {
+    const dir = await generate("tauri", ["release-script"]);
+    const script = await read(dir, "scripts/release.sh");
+    expect(script).toContain("package.json");
+    expect(script).toContain("src-tauri/Cargo.toml");
+    expect(script).toContain("src-tauri/tauri.conf.json");
+  });
+
+  it("bumps only package.json for non-tauri templates", async () => {
+    const dir = await generate("lib", ["release-script"]);
+    const script = await read(dir, "scripts/release.sh");
+    expect(script).not.toContain("Cargo.toml");
+  });
+
+  it("adds a cargo check job and a release workflow in CI", async () => {
+    const dir = await generate("tauri", ["github-actions"]);
+    expect(await read(dir, ".github/workflows/ci.yml")).toContain("cargo check --locked");
+    expect(await read(dir, ".github/workflows/release.yml")).toContain("tauri-apps/tauri-action");
+  });
+
+  it("does not add a release workflow for non-tauri templates", async () => {
+    const dir = await generate("api", ["github-actions"]);
+    await expect(fs.access(path.join(dir, ".github/workflows/release.yml"))).rejects.toThrow();
   });
 });
 

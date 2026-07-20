@@ -17,6 +17,30 @@ const DOTFILE_NAMES = new Set([
   "_dockerignore",
 ]);
 
+/**
+ * Read as UTF-8 and token-substitute everything except these. Icons and fonts
+ * would be silently corrupted by a utf8 round-trip.
+ */
+const BINARY_EXT = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".ico",
+  ".icns",
+  ".webp",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".otf",
+  ".pdf",
+  ".zip",
+]);
+
+export function isBinaryPath(p: string): boolean {
+  return BINARY_EXT.has(path.extname(p).toLowerCase());
+}
+
 export function templatesRoot(): string {
   // dist/core/fs-utils.js -> repo root -> templates/
   const here = path.dirname(fileURLToPath(import.meta.url));
@@ -74,6 +98,11 @@ export async function copyTree(
 
     if (entry.isDirectory()) {
       await copyTree(src, dest, tokens);
+      continue;
+    }
+
+    if (isBinaryPath(entry.name)) {
+      await fs.copyFile(src, dest);
       continue;
     }
 

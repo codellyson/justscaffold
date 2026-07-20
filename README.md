@@ -39,16 +39,24 @@ justscaffold new my-api -t api -f auth,vitest,docker -y
 | `cli` | citty commands, `bin` entry, `@clack/prompts` interactivity |
 | `mcp` | stdio MCP server, zod-validated tools, env-only config |
 | `api` | Hono service on Node, typed config, health check, error handling |
+| `tauri` | Tauri 2 desktop app — React 19 + Vite 6 + Tailwind over a Rust backend |
 
 ## Features
 
 | Id | Applies to | What it adds |
 | --- | --- | --- |
 | `vitest` | all | Test runner and a passing example spec |
-| `github-actions` | all | CI workflow: typecheck, build, and tests if present |
+| `github-actions` | all | CI workflow; adds a `cargo check` job and a `tauri-action` release matrix for `tauri` |
 | `auth` | `api` | Hashed bearer tokens, `requireAuth` middleware, token minting script |
 | `docker` | `api`, `mcp` | Multi-stage Dockerfile, compose file, non-root runtime |
 | `release-script` | all | Guarded version bump, tag, and push |
+
+Two features adapt to the template rather than existing twice. `release-script`
+bumps `package.json` alone for most templates, but for `tauri` it moves
+`package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` in
+lockstep — a bump that misses one produces an installer whose reported version
+disagrees with the binary inside it. `github-actions` likewise adds the Rust
+job and desktop release matrix only where there's Rust to build.
 
 ## How features compose
 

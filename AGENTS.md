@@ -4,7 +4,7 @@ A CLI that generates projects from templates plus opt-in feature modules.
 
 ## Layout
 
-```
+```text
 src/core/      generation engine — copy, merge, patch, validate
 src/features/  one FeatureModule per file
 src/commands/  citty command definitions
@@ -40,6 +40,17 @@ test/          generator tests
   project that compiles but behaves wrong.
 - The api template declares `Variables.user` unconditionally so its Hono
   generic is stable whether or not `auth` is enabled.
+- `copyTree` token-substitutes files as UTF-8; anything in `BINARY_EXT` is
+  `copyFile`d instead. Adding a binary asset type without extending that set
+  corrupts it silently — the file is written, just wrong.
+- `tauri-build` requires `src-tauri/icons/icon.ico` on Windows regardless of
+  what `bundle.icon` lists. A PNG-only icon set breaks every Windows build with
+  an error raised from the build script, not from your code.
+- Cargo package names may contain dashes; Rust identifiers may not. `main.rs`
+  references `__CRATE_NAME___lib`, so the `crateCase()` token has to stay in
+  sync with `[lib] name` in `Cargo.toml`.
+- Long Windows paths can fail Rust linking with `LNK1104`. That's the
+  environment, not the template — set `CARGO_TARGET_DIR` to something short.
 
 ## Workflow
 

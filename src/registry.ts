@@ -30,6 +30,12 @@ export const TEMPLATES: TemplateModule[] = [
     hint: "Hono router, typed config, health check",
     dir: "api",
   },
+  {
+    id: "tauri",
+    title: "Tauri desktop app",
+    hint: "Tauri 2 + React 19 + Vite + Tailwind over a Rust backend",
+    dir: "tauri",
+  },
 ];
 
 /**

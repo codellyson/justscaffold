@@ -2,7 +2,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { stripAnchors } from "./patch.js";
 
+const SKIP_DIRS = new Set(["node_modules", ".git", "target", "dist"]);
+
 const TEXT_EXT = new Set([
+  ".rs",
+  ".toml",
+  ".html",
+  ".css",
+  ".tsx",
   ".ts",
   ".tsx",
   ".js",
@@ -37,7 +44,7 @@ async function walk(dir: string): Promise<string[]> {
   const out: string[] = [];
   const entries = await fs.readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.name === "node_modules" || entry.name === ".git") continue;
+    if (SKIP_DIRS.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) out.push(...(await walk(full)));
     else out.push(full);

@@ -47,6 +47,8 @@ jobs:
             features: vitest,docker
           - template: api
             features: auth,vitest,docker,github-actions
+          - template: tauri
+            features: github-actions,release-script
     steps:
       - uses: actions/checkout@v4
 
@@ -54,6 +56,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # Tauri's Rust side needs GTK/webkit headers to compile on Linux. Without
+      # these the job dies inside a C build with an error that looks nothing
+      # like a Rust one.
+      - name: Install Linux webview dependencies
+        if: matrix.template == 'tauri'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.template == 'tauri'
 
       - run: npm install
       - run: npm run build
@@ -67,3 +81,10 @@ jobs:
           npm install
           npm run build
           npm test --if-present
+
+      # cargo check, not build: it catches the type and borrow errors that
+      # template drift actually produces, without paying for codegen.
+      - name: Check the generated Rust backend
+        if: matrix.template == 'tauri'
+        working-directory: /tmp/sample/src-tauri
+        run: cargo check

@@ -1,0 +1,29 @@
+[package]
+name = "__CRATE_NAME__"
+version = "0.1.0"
+description = "__PKG_DESCRIPTION__"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "__CRATE_NAME___lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+# Release-build tuning. `panic="abort"` shrinks the binary by dropping unwind
+# tables and matches Tauri's recommended profile; `lto` plus a single codegen
+# unit let the linker do whole-program optimization at the cost of noticeably
+# slower release builds. Dev builds are unaffected.
+[profile.release]
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

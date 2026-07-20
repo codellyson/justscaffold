@@ -1,4 +1,36 @@
-import type { FeatureModule } from "../core/types.js";
+import type { FeatureModule, ScaffoldContext } from "../core/types.js";
+
+/**
+ * The Tauri template carries the app version in three files that must move in
+ * lockstep — package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
+ * A bump that misses one produces an installer whose reported version disagrees
+ * with the binary inside it, which is exactly the failure this script exists to
+ * prevent. Everything else has a single version in package.json.
+ */
+function bumpBlock(ctx: ScaffoldContext): string {
+  const shared = `sed -i.bak -E "s/\\"version\\": \\"$CURRENT\\"/\\"version\\": \\"$VERSION\\"/" package.json
+rm -f package.json.bak`;
+
+  if (ctx.template !== "tauri") return shared;
+
+  return `${shared}
+
+sed -i.bak -E "s/^version = \\"$CURRENT\\"/version = \\"$VERSION\\"/" src-tauri/Cargo.toml
+rm -f src-tauri/Cargo.toml.bak
+
+sed -i.bak -E "s/\\"version\\": \\"$CURRENT\\"/\\"version\\": \\"$VERSION\\"/" src-tauri/tauri.conf.json
+rm -f src-tauri/tauri.conf.json.bak
+
+# Refresh Cargo.lock so the version bump is committed alongside the manifest
+# rather than showing up as an unexpected diff on someone else's next build.
+(cd src-tauri && cargo check --quiet) || true`;
+}
+
+function stageBlock(ctx: ScaffoldContext): string {
+  return ctx.template === "tauri"
+    ? "git add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json"
+    : "git add package.json";
+}
 
 export const releaseScript: FeatureModule = {
   id: "release-script",
@@ -12,7 +44,7 @@ export const releaseScript: FeatureModule = {
     },
   }),
 
-  files: () => [
+  files: (ctx) => [
     {
       path: "scripts/release.sh",
       contents: `#!/usr/bin/env bash
@@ -35,9 +67,9 @@ done
 
 die() { echo "error: $*" >&2; exit 1; }
 
-# Pre-flight. Each of these has burned someone before: releasing a dirty tree
-# ships uncommitted code, releasing off main tags the wrong commit, and
-# releasing behind origin silently drops other people's work from the tag.
+# Each of these has burned someone before: releasing a dirty tree ships
+# uncommitted code, releasing off main tags the wrong commit, and releasing
+# behind origin drops other people's work out of the tag.
 [ -z "$(git status --porcelain)" ] || die "working tree is not clean"
 [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || die "not on main"
 git fetch --quiet origin main
@@ -59,10 +91,9 @@ if [ "$ASSUME_YES" -eq 0 ]; then
 fi
 
 # -i.bak keeps this portable across BSD (macOS) and GNU sed.
-sed -i.bak -E "s/\\"version\\": \\"$CURRENT\\"/\\"version\\": \\"$VERSION\\"/" package.json
-rm -f package.json.bak
+${bumpBlock(ctx)}
 
-git add package.json
+${stageBlock(ctx)}
 git commit -m "chore(release): v$VERSION"
 git tag "v$VERSION"
 git push origin main
