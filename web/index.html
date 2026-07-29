@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>justscaffold — scaffold a just-app</title>
+    <style>
+      /* The justui token system, replicated for a static page. Values come
+         straight from @codellyson/justui; six themes, each light + dark. */
+      :root {
+        --bg: 22 20 18;
+        --bg-secondary: 37 33 30;
+        --border: 56 50 45;
+        --text-primary: 232 222 210;
+        --text-secondary: 178 167 152;
+        --text-muted: 124 114 102;
+        --accent: 168 180 220;
+        --accent-hover: 195 205 235;
+        --danger: 220 105 95;
+        --success: 165 195 130;
+        --warning: 230 195 115;
+
+        --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --radius-sm: 4px;
+        --radius: 6px;
+        --radius-lg: 8px;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        /* 13px base — the just-app density: tools, not consumer content. */
+        font-size: 13px;
+        font-family: var(--font-sans);
+        background: rgb(var(--bg));
+        color: rgb(var(--text-primary));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .wrap { max-width: 1160px; margin: 0 auto; padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 5rem; }
+
+      header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+      .wordmark { font-family: var(--mono); font-weight: 600; font-size: clamp(1.3rem, 3vw, 1.7rem); letter-spacing: -0.01em; margin: 0; }
+      .wordmark b { color: rgb(var(--accent)); font-weight: 600; }
+      .tagline { margin: 0.35rem 0 0; color: rgb(var(--text-secondary)); max-width: 58ch; font-size: 0.95rem; }
+
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 430px); gap: 2rem; align-items: start; }
+      @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+      .eyebrow {
+        display: flex; align-items: baseline; gap: 0.5rem;
+        font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em;
+        text-transform: uppercase; color: rgb(var(--text-muted)); margin-bottom: 0.75rem;
+      }
+      .eyebrow .n { color: rgb(var(--accent)); }
+      .step { margin-bottom: 1.75rem; }
+
+      input[type="text"] {
+        width: 100%; font-family: var(--font-mono); font-size: 0.95rem;
+        color: rgb(var(--text-primary)); background: rgb(var(--bg-secondary));
+        border: 1px solid rgb(var(--border)); border-radius: var(--radius); padding: 0.7rem 0.9rem;
+      }
+      input[type="text"]:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 1px; }
+      input.invalid { border-color: rgb(var(--danger)); }
+      .field-note { font-family: var(--font-mono); font-size: 0.76rem; color: rgb(var(--text-muted)); margin-top: 0.45rem; min-height: 1.1em; }
+      .field-note.error { color: rgb(var(--danger)); }
+
+      .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.6rem; }
+      .card {
+        text-align: left; background: rgb(var(--bg-secondary)); border: 1px solid rgb(var(--border));
+        border-radius: var(--radius); padding: 0.85rem 0.95rem; cursor: pointer;
+        display: flex; flex-direction: column; gap: 0.25rem;
+        /* Buttons don't inherit the document color — set it or .title goes black. */
+        color: rgb(var(--text-primary)); font-family: inherit;
+      }
+      .card:hover { border-color: rgb(var(--text-muted)); }
+      .card:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+      .card[aria-pressed="true"] { border-color: rgb(var(--accent)); background: rgb(var(--accent) / 0.1); }
+      .card .id { font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; color: rgb(var(--accent)); }
+      .card .title { font-weight: 500; font-size: 0.9rem; }
+      .card .hint { color: rgb(var(--text-muted)); font-size: 0.8rem; line-height: 1.4; }
+
+      .features { display: flex; flex-direction: column; gap: 0.4rem; }
+      .feature {
+        display: flex; align-items: flex-start; gap: 0.7rem; background: rgb(var(--bg-secondary));
+        border: 1px solid rgb(var(--border)); border-radius: var(--radius); padding: 0.7rem 0.9rem; cursor: pointer;
+      }
+      .feature:hover { border-color: rgb(var(--text-muted)); }
+      .feature input { margin-top: 0.15rem; accent-color: rgb(var(--accent)); width: 1rem; height: 1rem; flex: none; }
+      .feature .name { font-family: var(--font-mono); font-weight: 500; font-size: 0.85rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+      .feature .desc { color: rgb(var(--text-muted)); font-size: 0.8rem; }
+      .tag { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 100px; font-weight: 500; }
+      .tag.rec { color: rgb(var(--success)); background: rgb(var(--success) / 0.14); }
+      .tag.req { color: rgb(var(--warning)); background: rgb(var(--warning) / 0.14); }
+      .empty-features { color: rgb(var(--text-muted)); font-size: 0.85rem; font-style: italic; }
+
+      .options { display: flex; flex-direction: column; gap: 0.9rem; }
+      .opt-label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(var(--text-muted)); margin-bottom: 0.45rem; }
+      .segmented { display: inline-flex; border: 1px solid rgb(var(--border)); border-radius: var(--radius); overflow: hidden; flex-wrap: wrap; }
+      .segmented button { font-family: var(--font-mono); font-size: 0.8rem; color: rgb(var(--text-secondary)); background: rgb(var(--bg-secondary)); border: none; border-right: 1px solid rgb(var(--border)); padding: 0.5rem 0.85rem; cursor: pointer; }
+      .segmented button:last-child { border-right: none; }
+      .segmented button[aria-pressed="true"] { background: rgb(var(--accent)); color: rgb(var(--bg)); }
+      .checkline { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.82rem; cursor: pointer; }
+      .checkline input { accent-color: rgb(var(--accent)); width: 1rem; height: 1rem; }
+
+      /* preview pane */
+      .preview { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: 0.9rem; max-height: calc(100vh - 2rem); overflow: auto; }
+      @media (max-width: 900px) { .preview { position: static; max-height: none; } }
+      .panel { background: rgb(var(--bg-secondary)); border: 1px solid rgb(var(--border)); border-radius: var(--radius-lg); overflow: hidden; }
+      .panel-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0.65rem 0.9rem; border-bottom: 1px solid rgb(var(--border)); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(var(--text-muted)); }
+      .panel-head .count { letter-spacing: 0.03em; }
+      .panel-body { padding: 0.85rem 0.9rem; }
+
+      .dna { display: flex; flex-direction: column; gap: 0.5rem; }
+      .trait { display: flex; gap: 0.55rem; align-items: flex-start; font-size: 0.84rem; }
+      .trait .mark { color: rgb(var(--success)); font-family: var(--font-mono); flex: none; }
+      .trait b { font-weight: 600; }
+      .trait span { color: rgb(var(--text-secondary)); }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+      .chip { font-family: var(--font-mono); font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgb(var(--border)); color: rgb(var(--text-primary)); background: rgb(var(--bg)); white-space: nowrap; }
+      .chip.lang { border-color: rgb(var(--accent)); color: rgb(var(--accent)); font-weight: 600; }
+      .chip.dev { color: rgb(var(--text-muted)); border-style: dashed; }
+      .chip.added { background: rgb(var(--accent) / 0.12); border-color: rgb(var(--accent)); color: rgb(var(--accent)); }
+
+      .tree-wrap { max-height: 320px; overflow: auto; padding: 0.75rem 0.9rem; }
+      .tree { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.7; white-space: pre; }
+      .tree .row { display: block; }
+      .tree .dir { color: rgb(var(--text-muted)); }
+      .tree .file { color: rgb(var(--text-primary)); }
+      .tree .row.added .file { color: rgb(var(--accent)); font-weight: 500; }
+      .tree .plus { color: rgb(var(--accent)); }
+      .tree .fbadge { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.05em; text-transform: uppercase; color: rgb(var(--accent)); background: rgb(var(--accent) / 0.12); border-radius: var(--radius-sm); padding: 0 0.3rem; margin-left: 0.45rem; }
+
+      .notes { display: flex; flex-direction: column; gap: 0.45rem; }
+      .note { display: flex; gap: 0.5rem; align-items: flex-start; color: rgb(var(--text-primary)); font-size: 0.83rem; }
+      .note::before { content: "→"; color: rgb(var(--accent)); font-family: var(--font-mono); }
+
+      /* terminal */
+      .terminal { background: rgb(var(--bg)); border: 1px solid rgb(var(--border)); border-radius: var(--radius-lg); overflow: hidden; }
+      .term-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.8rem; border-bottom: 1px solid rgb(var(--border)); }
+      .dots { display: flex; gap: 0.35rem; }
+      .dots i { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: rgb(var(--border)); display: block; }
+      .term-title { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(var(--text-muted)); }
+      .copy { margin-left: auto; font-family: var(--font-mono); font-size: 0.72rem; color: rgb(var(--bg)); background: rgb(var(--accent)); border: none; border-radius: var(--radius-sm); padding: 0.35rem 0.8rem; cursor: pointer; font-weight: 600; }
+      .copy:hover { background: rgb(var(--accent-hover)); }
+      .copy.done { background: rgb(var(--success)); }
+      .term-body { padding: 0.9rem; overflow-x: auto; }
+      pre.cmd { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.7; color: rgb(var(--text-primary)); white-space: pre; }
+      pre.cmd .prompt { color: rgb(var(--accent)); user-select: none; }
+      pre.cmd .flag { color: rgb(var(--accent)); }
+      pre.cmd .warn { color: rgb(var(--danger)); }
+
+      /* theme switcher (mirrors justui ThemeToggle) */
+      .theme-btn { flex: none; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: rgb(var(--text-secondary)); background: rgb(var(--bg-secondary)); border: 1px solid rgb(var(--border)); border-radius: 100px; padding: 0.4rem 0.75rem; cursor: pointer; }
+      .theme-btn:hover { border-color: rgb(var(--text-muted)); color: rgb(var(--text-primary)); }
+      .theme-pop { position: fixed; top: 3.5rem; right: 1.5rem; width: 17rem; max-height: 70vh; overflow: auto; background: rgb(var(--bg)); border: 1px solid rgb(var(--border)); border-radius: var(--radius-lg); box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.5); padding: 0.85rem; z-index: 50; }
+      .theme-pop[hidden] { display: none; }
+      .theme-pop h3 { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(var(--text-muted)); margin: 0 0 0.5rem; }
+      .mode-row { width: 100%; font-family: var(--font-mono); font-size: 0.8rem; color: rgb(var(--text-primary)); background: rgb(var(--bg-secondary)); border: 1px solid rgb(var(--border)); border-radius: var(--radius); padding: 0.5rem; cursor: pointer; margin-bottom: 0.6rem; }
+      .theme-row { display: flex; align-items: center; gap: 0.55rem; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 0.4rem 0.5rem; cursor: pointer; color: rgb(var(--text-primary)); }
+      .theme-row:hover { background: rgb(var(--bg-secondary)); }
+      .theme-row[aria-pressed="true"] { border-color: rgb(var(--accent)); background: rgb(var(--accent) / 0.1); }
+      .swatch { width: 1.7rem; height: 1.2rem; border-radius: var(--radius-sm); border: 1px solid rgb(var(--border)); flex: none; overflow: hidden; display: flex; }
+      .swatch i { flex: 1; display: block; }
+      .theme-row .meta { min-width: 0; }
+      .theme-row .tname { font-family: var(--font-mono); font-size: 0.78rem; }
+      .theme-row .tdesc { font-size: 0.68rem; color: rgb(var(--text-muted)); }
+      .theme-row .check { margin-left: auto; color: rgb(var(--accent)); }
+
+      footer { margin-top: 2.5rem; color: rgb(var(--text-muted)); font-size: 0.8rem; font-family: var(--font-mono); text-align: center; }
+      footer a { color: rgb(var(--text-secondary)); }
+
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1 class="wordmark">just<b>scaffold</b></h1>
+          <p class="tagline">Scaffold a just-app: local-first, own-your-data, one shell across surfaces, agent-native. Pick the pieces; copy the command.</p>
+        </div>
+        <button class="theme-btn" id="themeBtn" type="button" aria-haspopup="true">Theme</button>
+      </header>
+
+      <div class="layout">
+        <div class="config">
+          <section class="step">
+            <div class="eyebrow"><span class="n">01</span><span>Name</span></div>
+            <input type="text" id="name" value="my-app" spellcheck="false" autocomplete="off" aria-label="Package name" />
+            <div class="field-note" id="nameNote">Also the directory name. Scopes like @acme/thing are allowed.</div>
+          </section>
+
+          <section class="step">
+            <div class="eyebrow"><span class="n">02</span><span>Template</span></div>
+            <div class="cards" id="templates"></div>
+          </section>
+
+          <section class="step">
+            <div class="eyebrow"><span class="n">03</span><span>Features</span></div>
+            <div class="features" id="features"></div>
+          </section>
+
+          <section class="step">
+            <div class="eyebrow"><span class="n">04</span><span>Options</span></div>
+            <div class="options">
+              <div>
+                <div class="opt-label">Run it with</div>
+                <div class="segmented" id="source">
+                  <button type="button" data-source="npx" aria-pressed="true">npx github:</button>
+                  <button type="button" data-source="global">justscaffold</button>
+                  <button type="button" data-source="dev">node dist</button>
+                </div>
+              </div>
+              <label class="checkline"><input type="checkbox" id="yes" checked /><span>--yes (skip prompts)</span></label>
+            </div>
+          </section>
+        </div>
+
+        <aside class="preview">
+          <div class="panel">
+            <div class="panel-head"><span>DNA in this build</span></div>
+            <div class="panel-body"><div class="dna" id="dna"></div></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span>Built on</span><span class="count" id="stackCount"></span></div>
+            <div class="panel-body"><div class="chips" id="stack"></div></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span>Project files</span><span class="count" id="treeCount"></span></div>
+            <div class="tree-wrap"><div class="tree" id="tree"></div></div>
+          </div>
+
+          <div class="panel" id="notePanel" hidden>
+            <div class="panel-head"><span>After install</span></div>
+            <div class="panel-body"><div class="notes" id="notes"></div></div>
+          </div>
+
+          <div class="terminal">
+            <div class="term-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="term-title">command</span>
+              <button class="copy" id="copy" type="button">Copy</button>
+            </div>
+            <div class="term-body"><pre class="cmd" id="cmd"></pre></div>
+          </div>
+        </aside>
+      </div>
+
+      <footer>
+        A static builder for <a href="https://github.com/codellyson/justscaffold">justscaffold</a>. Everything here is generated from the real templates, styled with the justui token system.
+      </footer>
+    </div>
+
+    <div class="theme-pop" id="themePop" hidden>
+      <h3>Appearance</h3>
+      <button class="mode-row" id="modeRow" type="button">Switch to light</button>
+      <div id="themeList"></div>
+    </div>
+
+    <script src="registry.js"></script>
+    <script type="module">
+      import { ALL_THEMES, VAR_MAP } from "../node_modules/@codellyson/justui/dist/index.js";
+      (function () {
+        var REG = window.SCAFFOLD_REGISTRY || { templates: [], features: [] };
+        var NAME_RE = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+
+        // Themes come from justui. The catalog follows the selected template:
+        // consumer themes for the web product, dev themes for everything else.
+        var THEMES = [];
+        function themesForTemplate() {
+          var consumer = state.template === "web";
+          return ALL_THEMES.filter(function (t) { return consumer ? t.category === "consumer" : t.category !== "consumer"; });
+        }
+        var KEY_ID = "justui.theme.id", KEY_MODE = "justui.theme.mode";
+        var themeId = localStorage.getItem(KEY_ID) || "espresso";
+        var mode = localStorage.getItem(KEY_MODE) ||
+          (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+        function themeById(id) { return THEMES.filter(function (t) { return t.id === id; })[0] || THEMES[0]; }
+        function applyTheme() {
+          var t = themeById(themeId);
+          if (!t) return;
+          var v = mode === "dark" ? t.dark : t.light;
+          var root = document.documentElement;
+          Object.keys(VAR_MAP).forEach(function (k) { if (v[k]) root.style.setProperty(VAR_MAP[k], v[k]); });
+          root.classList.toggle("dark", mode === "dark");
+          root.dataset.themeId = themeId;
+          root.dataset.themeMode = mode;
+          localStorage.setItem(KEY_ID, themeId);
+          localStorage.setItem(KEY_MODE, mode);
+        }
+
+        // Refresh the theme catalog for the current template and recolor.
+        function applyThemeCatalog() {
+          THEMES = themesForTemplate();
+          if (!THEMES.some(function (t) { return t.id === themeId; })) {
+            themeId = state.template === "web" ? "sunset" : "espresso";
+          }
+          applyTheme();
+          if (el.themePop && !el.themePop.hidden) renderThemeList();
+        }
+
+        // ---- state --------------------------------------------------------
+        var state = {
+          name: "my-app",
+          template: REG.templates[0] ? REG.templates[0].id : "",
+          features: {},
+          source: "npx",
+          yes: true,
+        };
+
+        function tpl() { return REG.templates.filter(function (t) { return t.id === state.template; })[0]; }
+        function appliesTo(f) { return f.appliesTo === "*" || f.appliesTo.indexOf(state.template) !== -1; }
+        function applicableFeatures() { return REG.features.filter(appliesTo); }
+        function selectedFeatures() { return applicableFeatures().filter(function (f) { return state.features[f.id]; }); }
+        function selectedIds() { return selectedFeatures().map(function (f) { return f.id; }); }
+
+        function resetFeatures() {
+          state.features = {};
+          applicableFeatures().forEach(function (f) { if (f.recommended) state.features[f.id] = true; });
+        }
+
+        // Resolve `requires` so the command + preview match what the CLI does.
+        function resolvedIds() {
+          var chosen = {};
+          selectedFeatures().forEach(function (f) { chosen[f.id] = true; });
+          var changed = true;
+          while (changed) {
+            changed = false;
+            REG.features.forEach(function (f) {
+              if (chosen[f.id] && f.requires) {
+                f.requires.forEach(function (r) { if (!chosen[r]) { chosen[r] = true; changed = true; } });
+              }
+            });
+          }
+          return REG.features.filter(function (f) { return chosen[f.id] && appliesTo(f); }).map(function (f) { return f.id; });
+        }
+
+        var el = {};
+        ["templates","features","name","nameNote","yes","stack","stackCount","tree","treeCount",
+         "notePanel","notes","cmd","copy","dna","themeBtn","themePop","themeList","modeRow"]
+          .forEach(function (id) { el[id] = document.getElementById(id); });
+
+        function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        function uniq(a) { var s = {}, o = []; a.forEach(function (x) { if (!s[x]) { s[x] = 1; o.push(x); } }); return o; }
+
+        // ---- DNA traits ---------------------------------------------------
+        // What makes this a "just" build, derived from the real selection.
+        function dnaTraits() {
+          var t = state.template, ids = resolvedIds(), out = [];
+          function has(id) { return ids.indexOf(id) !== -1; }
+          if (t === "tauri") {
+            out.push(["Local-first desktop", "Tauri shell over Rust — runs on your machine, no server required."]);
+            out.push(["Own your data", "Secrets in the OS keychain; nothing sent to a cloud you don't run."]);
+            out.push(["justui, six themes", "Semantic tokens, light + dark, 13px density — no hardcoded colors."]);
+            out.push(["Structured errors", "Serde-tagged CommandError, plain-English messages across the boundary."]);
+            if (has("web-surface")) out.push(["Same shell, two surfaces", "The same UI runs as desktop and in the browser; a local Hono + SQLite API, own-your-data."]);
+            if (has("mcp-surface")) out.push(["Agent-native", "Ships an MCP server so agents can drive the app over its own API."]);
+          } else if (t === "mcp") {
+            out.push(["Agent-native", "A stdio MCP server — zod-validated tools, env-only config."]);
+            out.push(["Local & self-contained", "Runs as a plain process; no accounts, no cloud."]);
+          } else if (t === "api") {
+            out.push(["Local-first service", "Hono on Node with typed config and a health check."]);
+            out.push(["Self-diagnosing", "Structured errors you can act on, not stack traces."]);
+          } else if (t === "cli") {
+            out.push(["Ship a real binary", "A citty CLI with a bin entry — no runtime, no signup."]);
+          } else if (t === "web") {
+            out.push(["Web-first product", "Runs in any browser — no install, instant."]);
+            out.push(["Built to convert", "A landing that sells: hero, pricing, one clear call to action."]);
+            out.push(["Brand themes", "justui consumer palettes — Sunset, Ocean + four more, light + dark."]);
+            out.push(["Ready to monetize", "Structured for accounts and payments."]);
+          } else if (t === "lib") {
+            out.push(["Just a library", "Typed, publishable, zero ceremony — tsc build and an exports map."]);
+          }
+          return out;
+        }
+
+        function renderDna() {
+          el.dna.innerHTML = dnaTraits().map(function (d) {
+            return '<div class="trait"><span class="mark">✓</span><span><b>' + esc(d[0]) + "</b> — " + esc(d[1]) + "</span></div>";
+          }).join("");
+        }
+
+        // ---- rendering ----------------------------------------------------
+        function renderTemplates() {
+          el.templates.innerHTML = "";
+          REG.templates.forEach(function (t) {
+            var b = document.createElement("button");
+            b.type = "button"; b.className = "card";
+            b.setAttribute("aria-pressed", String(t.id === state.template));
+            b.innerHTML = '<span class="id">' + esc(t.id) + "</span><span class=\"title\">" + esc(t.title) + "</span><span class=\"hint\">" + esc(t.hint) + "</span>";
+            b.addEventListener("click", function () {
+              if (state.template === t.id) return;
+              state.template = t.id; resetFeatures(); applyThemeCatalog(); renderAll();
+            });
+            el.templates.appendChild(b);
+          });
+        }
+
+        function renderFeatures() {
+          el.features.innerHTML = "";
+          var list = applicableFeatures();
+          if (!list.length) {
+            el.features.innerHTML = '<div class="empty-features">No optional features for this template.</div>';
+            return;
+          }
+          var auto = {};
+          resolvedIds().forEach(function (id) { auto[id] = true; });
+          list.forEach(function (f) {
+            var label = document.createElement("label"); label.className = "feature";
+            var checked = !!state.features[f.id];
+            var pulled = !checked && auto[f.id]; // pulled in by a requires
+            var tag = f.recommended ? '<span class="tag rec">recommended</span>' : "";
+            if (pulled) tag += ' <span class="tag req">required</span>';
+            label.innerHTML = '<input type="checkbox" ' + (checked || pulled ? "checked" : "") + (pulled ? " disabled" : "") + " />" +
+              '<span class="meta"><span class="name">' + esc(f.id) + tag + "</span><span class=\"desc\">" + esc(f.hint) + "</span></span>";
+            var cb = label.querySelector("input");
+            cb.addEventListener("change", function () { state.features[f.id] = cb.checked; renderPreview(); renderCmd(); });
+            el.features.appendChild(label);
+          });
+        }
+
+        function renderStack() {
+          var t = tpl(); if (!t) return;
+          var addRt = {}, addDv = {};
+          resolvedFeatureObjs().forEach(function (f) {
+            var bt = f.byTemplate[state.template] || {};
+            (bt.deps || []).forEach(function (d) { addRt[d] = 1; });
+            (bt.dev || []).forEach(function (d) { addDv[d] = 1; });
+          });
+          var runtime = uniq((t.deps || []).concat(Object.keys(addRt)));
+          var dev = uniq((t.dev || []).concat(Object.keys(addDv)));
+          var html = "";
+          (t.lang || []).forEach(function (l) { html += '<span class="chip lang">' + esc(l) + "</span>"; });
+          runtime.forEach(function (d) { html += '<span class="chip' + (addRt[d] ? " added" : "") + '">' + esc(d) + "</span>"; });
+          dev.forEach(function (d) { html += '<span class="chip dev' + (addDv[d] ? " added" : "") + '">' + esc(d) + "</span>"; });
+          el.stack.innerHTML = html;
+          el.stackCount.textContent = (t.lang.length + runtime.length + dev.length) + " deps";
+        }
+
+        function resolvedFeatureObjs() {
+          var ids = resolvedIds();
+          return REG.features.filter(function (f) { return ids.indexOf(f.id) !== -1; });
+        }
+
+        function composedPaths() {
+          var t = tpl(), added = {}, paths = (t.tree || []).slice();
+          resolvedFeatureObjs().forEach(function (f) {
+            var bt = f.byTemplate[state.template] || {};
+            (bt.adds || []).forEach(function (p) { added[p] = f.id; paths.push(p); });
+          });
+          return { paths: uniq(paths), added: added };
+        }
+
+        function buildTree(paths) {
+          var root = { children: {} };
+          paths.forEach(function (p) {
+            var parts = p.split("/"), node = root;
+            parts.forEach(function (part, i) {
+              var isFile = i === parts.length - 1;
+              if (!node.children[part]) node.children[part] = { name: part, dir: !isFile, children: {}, path: parts.slice(0, i + 1).join("/") };
+              node = node.children[part]; if (!isFile) node.dir = true;
+            });
+          });
+          return root;
+        }
+        function emitRows(node, depth, rows, added) {
+          Object.keys(node.children).map(function (k) { return node.children[k]; })
+            .sort(function (a, b) { if (a.dir !== b.dir) return a.dir ? -1 : 1; return a.name < b.name ? -1 : 1; })
+            .forEach(function (c) {
+              rows.push({ name: c.name, dir: c.dir, depth: depth, added: !c.dir && added[c.path] ? added[c.path] : null });
+              if (c.dir) emitRows(c, depth + 1, rows, added);
+            });
+        }
+        function renderTree() {
+          var comp = composedPaths(), rows = [];
+          emitRows(buildTree(comp.paths), 0, rows, comp.added);
+          el.tree.innerHTML = rows.map(function (r) {
+            var indent = new Array(r.depth + 1).join("  ");
+            if (r.dir) return '<span class="row"><span class="dir">' + indent + esc(r.name) + "/</span></span>";
+            var badge = r.added ? '<span class="fbadge">' + esc(r.added) + "</span>" : "";
+            var plus = r.added ? '<span class="plus">+ </span>' : "  ";
+            return '<span class="row' + (r.added ? " added" : "") + '">' + indent + plus + '<span class="file">' + esc(r.name) + "</span>" + badge + "</span>";
+          }).join("");
+          var addedCount = Object.keys(comp.added).length;
+          el.treeCount.textContent = comp.paths.length + " files" + (addedCount ? " · +" + addedCount : "");
+        }
+
+        function renderNotes() {
+          var notes = resolvedFeatureObjs().map(function (f) { return (f.byTemplate[state.template] || {}).note; }).filter(Boolean);
+          if (!notes.length) { el.notePanel.hidden = true; return; }
+          el.notePanel.hidden = false;
+          el.notes.innerHTML = notes.map(function (n) { return '<div class="note">' + esc(n) + "</div>"; }).join("");
+        }
+
+        function renderPreview() { renderDna(); renderStack(); renderTree(); renderNotes(); }
+
+        // ---- command ------------------------------------------------------
+        function baseParts() {
+          if (state.source === "npx") return ["npx", "github:codellyson/justscaffold"];
+          if (state.source === "global") return ["justscaffold"];
+          return ["node", "dist/index.js"];
+        }
+        function commandArgs() {
+          return baseParts()
+            .concat(["new", state.name || "<name>", "-t", state.template])
+            .concat(selectedIds().length ? ["-f", selectedIds().join(",")] : [])
+            .concat(state.yes ? ["-y"] : []);
+        }
+        function commandString() { return commandArgs().join(" "); }
+        function renderCmd() {
+          var valid = NAME_RE.test(state.name), args = commandArgs(), html = '<span class="prompt">$ </span>', col = 2;
+          args.forEach(function (a, i) {
+            var isFlag = a.charAt(0) === "-";
+            if (i > 0 && isFlag && col > 40) { html += " \\\n    "; col = 4; } else if (i > 0) { html += " "; col += 1; }
+            var cls = isFlag ? "flag" : ""; if (a === state.name && !valid) cls = "warn";
+            html += cls ? '<span class="' + cls + '">' + esc(a) + "</span>" : esc(a); col += a.length;
+          });
+          el.cmd.innerHTML = html;
+        }
+
+        function renderNameNote() {
+          var valid = NAME_RE.test(state.name);
+          if (!state.name) { el.name.classList.add("invalid"); el.nameNote.classList.add("error"); el.nameNote.textContent = "A name is required."; }
+          else if (!valid) { el.name.classList.add("invalid"); el.nameNote.classList.add("error"); el.nameNote.textContent = "Not a valid npm package name — lowercase, no spaces."; }
+          else { el.name.classList.remove("invalid"); el.nameNote.classList.remove("error"); el.nameNote.textContent = "Also the directory name. Scopes like @acme/thing are allowed."; }
+        }
+
+        function renderAll() { renderTemplates(); renderFeatures(); renderPreview(); renderCmd(); }
+
+        // ---- wiring -------------------------------------------------------
+        el.name.addEventListener("input", function () { state.name = el.name.value.trim(); renderNameNote(); renderCmd(); });
+        el.yes.addEventListener("change", function () { state.yes = el.yes.checked; renderCmd(); });
+        document.getElementById("source").addEventListener("click", function (ev) {
+          var b = ev.target.closest("button[data-source]"); if (!b) return;
+          state.source = b.getAttribute("data-source");
+          Array.prototype.forEach.call(this.children, function (c) { c.setAttribute("aria-pressed", String(c === b)); });
+          renderCmd();
+        });
+        el.copy.addEventListener("click", function () {
+          var text = commandString(), done = function () { el.copy.textContent = "Copied"; el.copy.classList.add("done"); setTimeout(function () { el.copy.textContent = "Copy"; el.copy.classList.remove("done"); }, 1400); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+          else fallbackCopy(text, done);
+        });
+        function fallbackCopy(text, done) { var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) {} document.body.removeChild(ta); }
+
+        // ---- theme switcher UI --------------------------------------------
+        function renderThemeList() {
+          el.modeRow.textContent = mode === "dark" ? "Switch to light" : "Switch to dark";
+          el.themeList.innerHTML = "";
+          THEMES.forEach(function (t) {
+            var row = document.createElement("button");
+            row.type = "button"; row.className = "theme-row";
+            row.setAttribute("aria-pressed", String(t.id === themeId));
+            row.innerHTML = '<span class="swatch"><i style="background:' + t.swatch.dark + '"></i><i style="background:' + t.swatch.light + '"></i></span>' +
+              '<span class="meta"><span class="tname">' + esc(t.label) + '</span><span class="tdesc">' + esc(t.description) + "</span></span>" +
+              (t.id === themeId ? '<span class="check">✓</span>' : "");
+            row.addEventListener("click", function () { themeId = t.id; applyTheme(); renderThemeList(); });
+            el.themeList.appendChild(row);
+          });
+        }
+        el.themeBtn.addEventListener("click", function () { var h = el.themePop.hidden; el.themePop.hidden = !h; if (h) renderThemeList(); });
+        el.modeRow.addEventListener("click", function () { mode = mode === "dark" ? "light" : "dark"; applyTheme(); renderThemeList(); });
+        document.addEventListener("click", function (ev) {
+          if (el.themePop.hidden) return;
+          if (!el.themePop.contains(ev.target) && ev.target !== el.themeBtn) el.themePop.hidden = true;
+        });
+
+        // ---- boot ---------------------------------------------------------
+        resetFeatures();
+        applyThemeCatalog();
+        renderAll();
+        renderNameNote();
+      })();
+    </script>
+  </body>
+</html>

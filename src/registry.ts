@@ -1,8 +1,10 @@
 import { auth } from "./features/auth.js";
 import { docker } from "./features/docker.js";
 import { githubActions } from "./features/github-actions.js";
+import { mcpSurface } from "./features/mcp-surface.js";
 import { releaseScript } from "./features/release-script.js";
 import { vitest } from "./features/vitest.js";
+import { webSurface } from "./features/web-surface.js";
 import type { FeatureModule, TemplateId, TemplateModule } from "./core/types.js";
 
 export const TEMPLATES: TemplateModule[] = [
@@ -33,8 +35,14 @@ export const TEMPLATES: TemplateModule[] = [
   {
     id: "tauri",
     title: "Tauri desktop app",
-    hint: "Tauri 2 + React 19 + Vite + Tailwind over a Rust backend",
+    hint: "local-first just-app: React 19 + justui over a Rust backend, keychain, six themes",
     dir: "tauri",
+  },
+  {
+    id: "web",
+    title: "Consumer web product",
+    hint: "web-first: converting landing + accounts + payments, brand themes (service · utility · fintech · shop)",
+    dir: "web",
   },
 ];
 
@@ -42,7 +50,15 @@ export const TEMPLATES: TemplateModule[] = [
  * Registry order is application order — a feature registered later can
  * deterministically override an earlier one's package.json keys.
  */
-const FEATURES: FeatureModule[] = [vitest, githubActions, auth, docker, releaseScript];
+const FEATURES: FeatureModule[] = [
+  vitest,
+  githubActions,
+  auth,
+  docker,
+  releaseScript,
+  webSurface,
+  mcpSurface,
+];
 
 export function listTemplates(): TemplateModule[] {
   return TEMPLATES;

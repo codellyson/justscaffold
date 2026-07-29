@@ -4,7 +4,9 @@ export const vitest: FeatureModule = {
   id: "vitest",
   title: "Vitest",
   hint: "test runner with a passing example spec",
-  appliesTo: "*",
+  // The tauri template is a workspace and ships its own vitest in apps/web, so
+  // a root-level config here would only collide with it.
+  appliesTo: ["lib", "cli", "mcp", "api"],
   recommended: true,
 
   pkg: () => ({

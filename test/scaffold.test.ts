@@ -7,7 +7,22 @@ import { ScaffoldError } from "../src/core/errors.js";
 import { isBinaryPath, templatesRoot } from "../src/core/fs-utils.js";
 import { featuresForTemplate } from "../src/core/resolve.js";
 import { listTemplates } from "../src/registry.js";
+import { tokensFor } from "../src/core/tokens.js";
 import type { ScaffoldContext, TemplateId } from "../src/core/types.js";
+
+// Match only the real scaffold tokens, not any __WORD__ — real code contains
+// look-alikes such as Tauri's `__TAURI_INTERNALS__` global.
+const TOKEN_NAMES = Object.keys(
+  tokensFor({
+    targetDir: "",
+    pkgName: "x",
+    description: "",
+    template: "lib",
+    features: [],
+    year: "2026",
+  }),
+);
+const TOKEN_RE = new RegExp(TOKEN_NAMES.join("|"));
 
 const roots: string[] = [];
 
@@ -59,7 +74,7 @@ describe.each(listTemplates())("template: $id", (template) => {
       if (isBinaryPath(file)) continue;
       const contents = await fs.readFile(file, "utf8");
       const rel = path.relative(dir, file);
-      expect(contents, `${rel} has an unsubstituted token`).not.toMatch(/__[A-Z_]+__/);
+      expect(contents, `${rel} has an unsubstituted token`).not.toMatch(TOKEN_RE);
       expect(contents, `${rel} has a leftover anchor`).not.toMatch(/@justscaffold:/);
     }
   });
@@ -111,6 +126,28 @@ describe("features", () => {
     const pkg = JSON.parse(await read(dir, "package.json"));
     const keys = Object.keys(pkg.devDependencies);
     expect(keys).toEqual([...keys].sort());
+  });
+});
+
+describe("api entry point and config", () => {
+  // rootDir "." plus include ["src","scripts"] nests output under dist/src,
+  // so `main`/`start`/Dockerfile all point at a file the build never emits.
+  it("compiles the entry to the path package.json.main advertises", async () => {
+    const dir = await generate("api", ["auth"]);
+    const pkg = JSON.parse(await read(dir, "package.json"));
+    const tsconfig = JSON.parse(await read(dir, "tsconfig.json"));
+    expect(pkg.main).toBe("./dist/index.js");
+    expect(tsconfig.compilerOptions.rootDir).toBe("src");
+    expect(tsconfig.include).toEqual(["src"]);
+  });
+
+  // The auth workflow and config both read process.env, and the mint-token
+  // note tells the user to fill in .env — so something has to load it.
+  it("loads .env so the documented token workflow actually works", async () => {
+    const dir = await generate("api", ["auth"]);
+    const pkg = JSON.parse(await read(dir, "package.json"));
+    expect(pkg.dependencies).toHaveProperty("dotenv");
+    expect(await read(dir, "src/index.ts")).toContain('import "dotenv/config"');
   });
 });
 
@@ -171,6 +208,38 @@ describe("tauri", () => {
   it("does not add a release workflow for non-tauri templates", async () => {
     const dir = await generate("api", ["github-actions"]);
     await expect(fs.access(path.join(dir, ".github/workflows/release.yml"))).rejects.toThrow();
+  });
+});
+
+describe("just-app surfaces", () => {
+  it("bakes justui and the theme boot into the tauri web app", async () => {
+    const dir = await generate("tauri", []);
+    const webPkg = JSON.parse(await read(dir, "apps/web/package.json"));
+    expect(webPkg.dependencies).toHaveProperty("@codellyson/justui");
+    expect(await read(dir, "apps/web/src/main.tsx")).toContain("bootTheme");
+  });
+
+  it("web-surface adds a local node:sqlite API and the one transport seam", async () => {
+    const dir = await generate("tauri", ["web-surface"]);
+    const apiPkg = JSON.parse(await read(dir, "apps/api/package.json"));
+    expect(apiPkg.dependencies).toHaveProperty("hono");
+    expect(await read(dir, "apps/api/src/db.ts")).toContain("node:sqlite");
+    const seam = await read(dir, "apps/web/src/lib/api-client.ts");
+    expect(seam).toContain('credentials: isTauri ? "omit" : "include"');
+  });
+
+  it("mcp-surface pulls in web-surface (requires) and ships a stdio server", async () => {
+    const dir = await generate("tauri", ["mcp-surface"]);
+    await expect(fs.access(path.join(dir, "apps/api/package.json"))).resolves.toBeUndefined();
+    const mcp = await read(dir, "packages/mcp-server/src/index.ts");
+    expect(mcp).toContain("StdioServerTransport");
+    expect(mcp).toContain("registerTool");
+  });
+
+  it("keeps vitest off tauri — it ships its own in apps/web", async () => {
+    await expect(generate("tauri", ["vitest"])).rejects.toMatchObject({
+      kind: "feature-not-applicable",
+    });
   });
 });
 

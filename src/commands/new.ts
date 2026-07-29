@@ -67,9 +67,12 @@ export const newCommand = defineCommand({
       const result = await scaffold(ctx);
       spinner.stop("Generated");
 
-      const rel = path.relative(process.cwd(), result.targetDir) || ".";
+      const rel = path.relative(process.cwd(), result.targetDir);
+      // A target outside cwd yields a "../../.." chain that's harder to read
+      // than the absolute path; only show the relative form when it descends.
+      const dest = !rel || rel.startsWith("..") ? result.targetDir : rel;
       const lines = [
-        `cd ${rel}`,
+        `cd ${dest}`,
         "npm install",
         "npm run build",
         ...result.notes.map((n) => `# ${n}`),

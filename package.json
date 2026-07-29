@@ -19,6 +19,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/index.ts",
     "lint": "tsc --noEmit -p tsconfig.json",
+    "gen:web": "tsx scripts/gen-web.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "tsc -p tsconfig.json",
@@ -29,6 +30,7 @@
     "citty": "^0.1.6"
   },
   "devDependencies": {
+    "@codellyson/justui": "file:../justui",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",

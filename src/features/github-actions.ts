@@ -8,7 +8,38 @@ const LINUX_TAURI_DEPS = `      - name: Install Linux webview dependencies
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 `;
 
-function ciWorkflow(ctx: ScaffoldContext): string {
+// tauri and web are pnpm workspaces; everything else is a single npm package.
+// Keeping the two install/build stanzas apart is clearer than a forest of
+// conditionals inside one.
+const MONOREPO_TEMPLATES = new Set<string>(["tauri", "web"]);
+
+function jsJob(ctx: ScaffoldContext): string {
+  if (MONOREPO_TEMPLATES.has(ctx.template)) {
+    return `  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Typecheck
+        run: pnpm -r --parallel lint
+
+      - name: Build
+        run: pnpm -r --parallel build
+
+      - name: Test
+        run: pnpm -r --parallel test
+`;
+  }
+
   const testStep = ctx.features.includes("vitest")
     ? `
       - name: Test
@@ -16,9 +47,31 @@ function ciWorkflow(ctx: ScaffoldContext): string {
 `
     : "";
 
+  return `  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci || npm install
+
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+${testStep}`;
+}
+
+function ciWorkflow(ctx: ScaffoldContext): string {
   // cargo check, not cargo build: it catches type and borrow errors — which is
-  // what breaks when a template drifts — without paying for codegen or for the
-  // full bundling toolchain.
+  // what breaks when a template drifts — without paying for codegen or the full
+  // bundling toolchain.
   const rustJob =
     ctx.template === "tauri"
       ? `
@@ -48,25 +101,7 @@ on:
   pull_request:
 
 jobs:
-  js:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install
-        run: npm ci || npm install
-
-      - name: Typecheck
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-${testStep}${rustJob}`;
+${jsJob(ctx)}${rustJob}`;
 }
 
 function releaseWorkflow(): string {
@@ -95,10 +130,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -115,7 +151,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install
-        run: npm ci || npm install
+        run: pnpm install --frozen-lockfile || pnpm install
 
       - uses: tauri-apps/tauri-action@v0
         env:

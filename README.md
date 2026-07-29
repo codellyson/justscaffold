@@ -39,24 +39,27 @@ justscaffold new my-api -t api -f auth,vitest,docker -y
 | `cli` | citty commands, `bin` entry, `@clack/prompts` interactivity |
 | `mcp` | stdio MCP server, zod-validated tools, env-only config |
 | `api` | Hono service on Node, typed config, health check, error handling |
-| `tauri` | Tauri 2 desktop app — React 19 + Vite 6 + Tailwind over a Rust backend |
+| `tauri` | A **just-app**: local-first Tauri 2 desktop over Rust — React 19 + Vite + [`@codellyson/justui`](https://www.npmjs.com/package/@codellyson/justui) (six themes), OS-keychain secrets, serde-tagged `CommandError` |
 
 ## Features
 
 | Id | Applies to | What it adds |
 | --- | --- | --- |
-| `vitest` | all | Test runner and a passing example spec |
-| `github-actions` | all | CI workflow; adds a `cargo check` job and a `tauri-action` release matrix for `tauri` |
+| `vitest` | `lib`, `cli`, `mcp`, `api` | Test runner and a passing example spec (the `tauri` app ships its own in `apps/web`) |
+| `github-actions` | all | CI workflow; pnpm + a `cargo check` job and a `tauri-action` release matrix for `tauri` |
 | `auth` | `api` | Hashed bearer tokens, `requireAuth` middleware, token minting script |
 | `docker` | `api`, `mcp` | Multi-stage Dockerfile, compose file, non-root runtime |
 | `release-script` | all | Guarded version bump, tag, and push |
+| `web-surface` | `tauri` | "Same shell, two surfaces": a local Hono + `node:sqlite` API and the one bearer/cookie transport seam, so the UI also runs in the browser |
+| `mcp-surface` | `tauri` | A thin stdio MCP server (`packages/mcp-server`) over the app's own API — agent-native. Requires `web-surface` |
 
-Two features adapt to the template rather than existing twice. `release-script`
+Features adapt to the template rather than existing twice. `release-script`
 bumps `package.json` alone for most templates, but for `tauri` it moves
 `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` in
-lockstep — a bump that misses one produces an installer whose reported version
-disagrees with the binary inside it. `github-actions` likewise adds the Rust
-job and desktop release matrix only where there's Rust to build.
+lockstep. `github-actions` uses pnpm and adds the Rust job + desktop release
+matrix only for `tauri`. `mcp-surface` `requires` `web-surface`, so selecting it
+pulls the API in automatically — the [web builder](web/index.html) resolves the
+same way.
 
 ## How features compose
 

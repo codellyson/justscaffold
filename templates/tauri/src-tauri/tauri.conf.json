@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.example.__CRATE_NAME__",
   "build": {
-    "frontendDist": "../dist",
+    "frontendDist": "../apps/web/dist",
     "devUrl": "http://localhost:3030",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "pnpm --filter @__BIN_NAME__/web dev",
+    "beforeBuildCommand": "pnpm --filter @__BIN_NAME__/web build"
   },
   "app": {
     "windows": [

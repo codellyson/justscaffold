@@ -1,0 +1,151 @@
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { scaffold } from "../src/core/apply.js";
+import { listFeatures, listTemplates } from "../src/registry.js";
+import type { FeatureModule, ScaffoldContext, TemplateId } from "../src/core/types.js";
+
+// The web builder is a static page, so it can't run the scaffolder in the
+// browser. Rather than hand-describe what each template produces (which would
+// rot the first time a template changes), we run the real engine here into
+// temp dirs and read back the actual trees, dependencies, and notes. The page
+// then just composes base + feature deltas the user selects.
+
+const tmpRoots: string[] = [];
+
+async function generate(template: TemplateId, features: string[]) {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "genweb-"));
+  tmpRoots.push(root);
+  const targetDir = path.join(root, "app");
+  const ctx: ScaffoldContext = {
+    targetDir,
+    pkgName: "my-app",
+    description: "A demo project.",
+    template,
+    features,
+    year: "2026",
+  };
+  const result = await scaffold(ctx);
+  const tree = await walk(targetDir);
+  const pkg = JSON.parse(await fs.readFile(path.join(targetDir, "package.json"), "utf8"));
+  return { tree, pkg, notes: result.notes };
+}
+
+async function walk(dir: string, base = dir): Promise<string[]> {
+  const out: string[] = [];
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await walk(full, base)));
+    else out.push(path.relative(base, full).split(path.sep).join("/"));
+  }
+  return out.sort();
+}
+
+function depKeys(pkg: Record<string, unknown>, field: "dependencies" | "devDependencies"): string[] {
+  const map = pkg[field];
+  return map && typeof map === "object" ? Object.keys(map as object).sort() : [];
+}
+
+function ctxFor(template: TemplateId, features: string[]): ScaffoldContext {
+  return {
+    targetDir: "",
+    pkgName: "my-app",
+    description: "A demo project.",
+    template,
+    features,
+    year: "2026",
+  };
+}
+
+function appliesTo(feature: FeatureModule, template: TemplateId): boolean {
+  return feature.appliesTo === "*" || feature.appliesTo.includes(template);
+}
+
+async function buildRegistry() {
+  const templates = [];
+  const baseByTemplate: Record<string, { tree: string[]; deps: string[]; dev: string[] }> = {};
+
+  for (const t of listTemplates()) {
+    const base = await generate(t.id, []);
+    baseByTemplate[t.id] = {
+      tree: base.tree,
+      deps: depKeys(base.pkg, "dependencies"),
+      dev: depKeys(base.pkg, "devDependencies"),
+    };
+    templates.push({
+      id: t.id,
+      title: t.title,
+      hint: t.hint,
+      lang: base.tree.some((f) => f.startsWith("src-tauri/"))
+        ? ["TypeScript", "Rust"]
+        : ["TypeScript"],
+      deps: baseByTemplate[t.id].deps,
+      dev: baseByTemplate[t.id].dev,
+      tree: base.tree,
+    });
+  }
+
+  const features = [];
+  for (const f of listFeatures()) {
+    const byTemplate: Record<string, unknown> = {};
+    const requires = f.requires ?? [];
+    for (const t of listTemplates()) {
+      if (!appliesTo(f, t.id)) continue;
+      // Diff against base + this feature's requires, not bare base, so a feature
+      // is credited only with the files it adds — not the ones its requires do.
+      const baseline = requires.length ? await generate(t.id, requires) : baseByTemplate[t.id];
+      const baselineTree = new Set(baseline.tree);
+      const baselineDeps = "deps" in baseline ? baseline.deps : depKeys(baseline.pkg, "dependencies");
+      const baselineDev = "dev" in baseline ? baseline.dev : depKeys(baseline.pkg, "devDependencies");
+      const withFeature = await generate(t.id, [f.id]);
+      const ctx = ctxFor(t.id, [f.id]);
+      byTemplate[t.id] = {
+        adds: withFeature.tree.filter((p) => !baselineTree.has(p)),
+        deps: depKeys(withFeature.pkg, "dependencies").filter((d) => !baselineDeps.includes(d)),
+        dev: depKeys(withFeature.pkg, "devDependencies").filter((d) => !baselineDev.includes(d)),
+        patches: (f.patches?.(ctx) ?? []).map((p) => ({ file: p.file, anchor: p.anchor })),
+        note: f.postInstallNote?.(ctx) ?? null,
+      };
+    }
+    features.push({
+      id: f.id,
+      title: f.title,
+      hint: f.hint,
+      appliesTo: f.appliesTo,
+      recommended: Boolean(f.recommended),
+      requires: requires.length ? requires : null,
+      byTemplate,
+    });
+  }
+
+  return { templates, features };
+}
+
+export async function serializeRegistry(): Promise<string> {
+  let registry;
+  try {
+    registry = await buildRegistry();
+  } finally {
+    await Promise.all(tmpRoots.map((r) => fs.rm(r, { recursive: true, force: true })));
+    tmpRoots.length = 0;
+  }
+  return [
+    "// Generated by scripts/gen-web.ts — do not edit. Run `npm run gen:web`.",
+    `window.SCAFFOLD_REGISTRY = ${JSON.stringify(registry, null, 2)};`,
+    "",
+  ].join("\n");
+}
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+export const webRegistryPath = path.join(here, "..", "web", "registry.js");
+
+// Only write when run as a script; importing this module (e.g. from the drift
+// test) must stay side-effect free.
+const runDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (runDirectly) {
+  const contents = await serializeRegistry();
+  await fs.mkdir(path.dirname(webRegistryPath), { recursive: true });
+  await fs.writeFile(webRegistryPath, contents);
+  console.log(`wrote ${path.relative(path.join(here, ".."), webRegistryPath)}`);
+}

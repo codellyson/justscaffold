@@ -1,4 +1,4 @@
-export type TemplateId = "lib" | "cli" | "mcp" | "api" | "tauri";
+export type TemplateId = "lib" | "cli" | "mcp" | "api" | "tauri" | "web";
 
 export interface ScaffoldContext {
   targetDir: string;

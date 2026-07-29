@@ -1,0 +1,25 @@
+@import "@codellyson/justui/tokens.css";
+@import "@fontsource-variable/geist";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Consumer density: 15px and roomy — this is a page people browse, not a tool. */
+body {
+  margin: 0;
+  background: rgb(var(--bg));
+  color: rgb(var(--text-primary));
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
