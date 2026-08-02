@@ -161,6 +161,7 @@ window.SCAFFOLD_REGISTRY = {
         "apps/web/package.json",
         "apps/web/postcss.config.cjs",
         "apps/web/src/App.tsx",
+        "apps/web/src/Marketplace.tsx",
         "apps/web/src/main.tsx",
         "apps/web/src/styles/global.css",
         "apps/web/tailwind.config.cjs",

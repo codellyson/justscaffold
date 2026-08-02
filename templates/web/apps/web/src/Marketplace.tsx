@@ -44,6 +44,7 @@ function Tile({ tint, glyph, className = "" }: { tint: keyof typeof TINTS; glyph
       style={{ background: `linear-gradient(135deg, ${t.a}, ${t.b})` }}
     >
       <Glyph name={glyph} className="h-1/3 w-1/3" style={{ color: t.ink, opacity: 0.85 }} />
+      <div className="pointer-events-none absolute inset-0" style={{ boxShadow: "inset 0 -28px 48px -28px rgba(0,0,0,0.16)" }} />
     </div>
   );
 }
@@ -151,7 +152,7 @@ export function Marketplace() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 pb-20">
+      <main className="reveal mx-auto max-w-6xl px-6 pb-20">
         {/* hero promos */}
         <section className="grid gap-4 py-6 md:grid-cols-2">
           {[
@@ -205,9 +206,9 @@ export function Marketplace() {
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
             {DEALS.map((d) => (
               <article key={d.id} className="group">
-                <div className="relative">
-                  <Tile tint={d.tint} glyph={d.glyph} className="aspect-square rounded-xl" />
-                  <span className="absolute left-2 top-2 rounded-full bg-success px-2 py-0.5 text-xs font-bold text-bg">
+                <div className="relative overflow-hidden rounded-xl">
+                  <Tile tint={d.tint} glyph={d.glyph} className="aspect-square transition-transform duration-500 group-hover:scale-105" />
+                  <span className="absolute left-2 top-2 z-10 rounded-full bg-success px-2 py-0.5 text-xs font-bold text-bg">
                     {d.off}% off
                   </span>
                   <Heart on={!!saved[d.id]} onClick={() => toggle(d.id)} />

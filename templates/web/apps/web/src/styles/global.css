@@ -1,7 +1,6 @@
 @import "@codellyson/justui/tokens.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
-@import "@fontsource-variable/bricolage-grotesque";
 @import "@fontsource-variable/fraunces";
 @tailwind base;
 @tailwind components;
@@ -9,7 +8,6 @@
 
 :root {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Bricolage Grotesque Variable", "Geist Variable", ui-sans-serif, sans-serif;
   --font-serif: "Fraunces Variable", ui-serif, Georgia, "Times New Roman", serif;
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -29,10 +27,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.font-display {
-  font-family: var(--font-display);
-}
-
 .font-serif {
   font-family: var(--font-serif);
 }
@@ -40,4 +34,25 @@ body {
 .font-data {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.reveal {
+  animation: reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
 }
