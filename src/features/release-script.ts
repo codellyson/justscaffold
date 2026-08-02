@@ -1,15 +1,24 @@
 import type { FeatureModule, ScaffoldContext } from "../core/types.js";
 
 /**
- * The Tauri template carries the app version in three files that must move in
- * lockstep — package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
- * A bump that misses one produces an installer whose reported version disagrees
- * with the binary inside it, which is exactly the failure this script exists to
- * prevent. Everything else has a single version in package.json.
+ * Some templates carry the app version in more than one file, and every one of
+ * them has to move in lockstep. Tauri has three — package.json,
+ * src-tauri/Cargo.toml, and src-tauri/tauri.conf.json — and a bump that misses
+ * one produces an installer whose reported version disagrees with the binary
+ * inside it. The extension has two, and Chrome reads only the manifest. Both
+ * are exactly the failure this script exists to prevent; everything else has a
+ * single version in package.json.
  */
 function bumpBlock(ctx: ScaffoldContext): string {
   const shared = `sed -i.bak -E "s/\\"version\\": \\"$CURRENT\\"/\\"version\\": \\"$VERSION\\"/" package.json
 rm -f package.json.bak`;
+
+  if (ctx.template === "extension") {
+    return `${shared}
+
+sed -i.bak -E "s/\\"version\\": \\"$CURRENT\\"/\\"version\\": \\"$VERSION\\"/" public/manifest.json
+rm -f public/manifest.json.bak`;
+  }
 
   if (ctx.template !== "tauri") return shared;
 
@@ -27,9 +36,11 @@ rm -f src-tauri/tauri.conf.json.bak
 }
 
 function stageBlock(ctx: ScaffoldContext): string {
-  return ctx.template === "tauri"
-    ? "git add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json"
-    : "git add package.json";
+  if (ctx.template === "tauri") {
+    return "git add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json";
+  }
+  if (ctx.template === "extension") return "git add package.json public/manifest.json";
+  return "git add package.json";
 }
 
 export const releaseScript: FeatureModule = {

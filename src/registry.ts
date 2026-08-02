@@ -44,6 +44,12 @@ export const TEMPLATES: TemplateModule[] = [
     hint: "web-first: converting landing + accounts + payments, brand themes (service · utility · fintech · shop)",
     dir: "web",
   },
+  {
+    id: "extension",
+    title: "Chrome extension",
+    hint: "Manifest V3: React popup, service worker, content script, typed message bus",
+    dir: "extension",
+  },
 ];
 
 /**

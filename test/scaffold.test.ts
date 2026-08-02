@@ -243,6 +243,90 @@ describe("just-app surfaces", () => {
   });
 });
 
+describe("extension", () => {
+  // Everything Chrome loads, it loads by the exact path written in the
+  // manifest. A hashed or renamed entry produces an extension that installs
+  // and then does nothing, with no error on any console you would think to open.
+  it("ships an MV3 manifest whose paths match what the build emits", async () => {
+    const dir = await generate("extension", []);
+    const manifest = JSON.parse(await read(dir, "public/manifest.json"));
+
+    expect(manifest.manifest_version).toBe(3);
+    expect(manifest.name).toBe("Test App");
+    expect(manifest.action.default_popup).toBe("popup.html");
+    expect(manifest.background.service_worker).toBe("background.js");
+    expect(manifest.background.type).toBe("module");
+    expect(manifest.content_scripts[0].js).toEqual(["content.js"]);
+
+    const viteConfig = await read(dir, "vite.config.ts");
+    expect(viteConfig).toContain('entryFileNames: "[name].js"');
+    expect(viteConfig).toContain("popup.html");
+    expect(viteConfig).toContain("src/background/index.ts");
+    expect(await read(dir, "vite.content.config.ts")).toContain('fileName: () => "content.js"');
+  });
+
+  // Content scripts are injected as classic scripts. An ESM bundle here loads
+  // and silently never runs, which is why this is a second build at all.
+  it("builds the content script as a separate IIFE that does not wipe dist/", async () => {
+    const dir = await generate("extension", []);
+    const contentConfig = await read(dir, "vite.content.config.ts");
+    expect(contentConfig).toContain('formats: ["iife"]');
+    expect(contentConfig).toContain("emptyOutDir: false");
+
+    // Order matters: the module build empties dist/, so it has to run first.
+    const pkg = JSON.parse(await read(dir, "package.json"));
+    expect(pkg.scripts.build).toBe(
+      "tsc --noEmit && vite build && vite build --config vite.content.config.ts",
+    );
+  });
+
+  it("keeps the manifest version and package.json version in step", async () => {
+    const dir = await generate("extension", []);
+    const pkg = JSON.parse(await read(dir, "package.json"));
+    const manifest = JSON.parse(await read(dir, "public/manifest.json"));
+    expect(manifest.version).toBe(pkg.version);
+  });
+
+  // Chrome reads the version from the manifest and npm from package.json, so
+  // a bump that touches only one ships a listing that disagrees with itself.
+  it("bumps the manifest alongside package.json in the release script", async () => {
+    const dir = await generate("extension", ["release-script"]);
+    const script = await read(dir, "scripts/release.sh");
+    expect(script).toContain('sed -i.bak -E "s/\\"version\\": \\"$CURRENT\\"');
+    expect(script).toContain("public/manifest.json");
+    expect(script).toContain("git add package.json public/manifest.json");
+    expect(script).not.toContain("Cargo.toml");
+  });
+
+  it("copies the icons byte-for-byte", async () => {
+    const dir = await generate("extension", []);
+    for (const size of [16, 32, 48, 128]) {
+      const rel = `public/icons/icon-${size}.png`;
+      const generated = await fs.readFile(path.join(dir, rel));
+      const original = await fs.readFile(path.join(templatesRoot(), "extension", rel));
+      expect(generated.equals(original), rel).toBe(true);
+      expect(generated.subarray(0, 8)).toEqual(
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      );
+    }
+  });
+
+  // The popup renders inside the extension's own origin; the content script
+  // renders inside somebody else's page. Tailwind may only reach the first.
+  it("keeps the content script out of the Tailwind content globs", async () => {
+    const dir = await generate("extension", []);
+    const tailwind = await read(dir, "tailwind.config.cjs");
+    expect(tailwind).toContain("./src/popup/**/*.{ts,tsx}");
+    expect(tailwind).not.toContain("./src/**/*.{ts,tsx}");
+    expect(await read(dir, "src/content/index.ts")).not.toContain("global.css");
+  });
+
+  it("derives the content bundle's global name from the package name", async () => {
+    const dir = await generate("extension", [], "@acme/my-cool-app");
+    expect(await read(dir, "vite.content.config.ts")).toContain('name: "MY_COOL_APP_CONTENT"');
+  });
+});
+
 describe("validation", () => {
   it("rejects an invalid package name", async () => {
     await expect(generate("lib", [], "Not Valid!")).rejects.toBeInstanceOf(ScaffoldError);

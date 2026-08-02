@@ -53,10 +53,14 @@ export const newCommand = defineCommand({
         args.dir ?? unscopedDir(pkgName),
       );
 
+      // This lands in package.json and, for the extension template, in the
+      // manifest description Chrome shows on the extensions page.
+      const article = /^[aeiou]/.test(template) ? "An" : "A";
+
       const ctx: ScaffoldContext = {
         targetDir,
         pkgName,
-        description: `A ${template} project.`,
+        description: `${article} ${template} project.`,
         template,
         features,
         year: String(new Date().getFullYear()),

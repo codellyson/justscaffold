@@ -170,6 +170,54 @@ window.SCAFFOLD_REGISTRY = {
         "package.json",
         "pnpm-workspace.yaml"
       ]
+    },
+    {
+      "id": "extension",
+      "title": "Chrome extension",
+      "hint": "Manifest V3: React popup, service worker, content script, typed message bus",
+      "lang": [
+        "TypeScript"
+      ],
+      "deps": [
+        "@codellyson/justui",
+        "@fontsource-variable/geist",
+        "react",
+        "react-dom"
+      ],
+      "dev": [
+        "@types/chrome",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "autoprefixer",
+        "concurrently",
+        "postcss",
+        "tailwindcss",
+        "typescript",
+        "vite"
+      ],
+      "tree": [
+        ".gitignore",
+        "README.md",
+        "package.json",
+        "popup.html",
+        "postcss.config.cjs",
+        "public/icons/icon-128.png",
+        "public/icons/icon-16.png",
+        "public/icons/icon-32.png",
+        "public/icons/icon-48.png",
+        "public/manifest.json",
+        "src/background/index.ts",
+        "src/content/index.ts",
+        "src/lib/messages.ts",
+        "src/popup/Popup.tsx",
+        "src/popup/main.tsx",
+        "src/styles/global.css",
+        "tailwind.config.cjs",
+        "tsconfig.json",
+        "vite.config.ts",
+        "vite.content.config.ts"
+      ]
     }
   ],
   "features": [
@@ -181,7 +229,8 @@ window.SCAFFOLD_REGISTRY = {
         "lib",
         "cli",
         "mcp",
-        "api"
+        "api",
+        "extension"
       ],
       "recommended": true,
       "requires": null,
@@ -223,6 +272,18 @@ window.SCAFFOLD_REGISTRY = {
           "note": null
         },
         "api": {
+          "adds": [
+            "test/smoke.test.ts",
+            "vitest.config.ts"
+          ],
+          "deps": [],
+          "dev": [
+            "vitest"
+          ],
+          "patches": [],
+          "note": null
+        },
+        "extension": {
           "adds": [
             "test/smoke.test.ts",
             "vitest.config.ts"
@@ -291,6 +352,15 @@ window.SCAFFOLD_REGISTRY = {
           "note": null
         },
         "web": {
+          "adds": [
+            ".github/workflows/ci.yml"
+          ],
+          "deps": [],
+          "dev": [],
+          "patches": [],
+          "note": null
+        },
+        "extension": {
           "adds": [
             ".github/workflows/ci.yml"
           ],
@@ -422,6 +492,15 @@ window.SCAFFOLD_REGISTRY = {
           "note": "Run \"chmod +x scripts/release.sh\" if your platform needs it."
         },
         "web": {
+          "adds": [
+            "scripts/release.sh"
+          ],
+          "deps": [],
+          "dev": [],
+          "patches": [],
+          "note": "Run \"chmod +x scripts/release.sh\" if your platform needs it."
+        },
+        "extension": {
           "adds": [
             "scripts/release.sh"
           ],

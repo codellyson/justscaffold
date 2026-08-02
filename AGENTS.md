@@ -51,6 +51,19 @@ test/          generator tests
   sync with `[lib] name` in `Cargo.toml`.
 - Long Windows paths can fail Rust linking with `LNK1104`. That's the
   environment, not the template — set `CARGO_TARGET_DIR` to something short.
+- The extension template builds twice. Chrome injects content scripts as
+  classic scripts, so `content.js` has to be an IIFE while the popup and
+  service worker are ES modules, and Rollup emits one format per build.
+  `vite.content.config.ts` runs second with `emptyOutDir: false`; reversing the
+  order in `scripts.build` deletes the first build's output.
+- Chrome resolves `popup.html`, `background.js`, and `content.js` by the exact
+  name in the manifest, so the extension's Vite output must stay unhashed.
+- The extension carries its version in both `package.json` and
+  `public/manifest.json`, and Chrome reads only the manifest. `release-script`
+  bumps the pair together — same problem Tauri has with three files.
+- Tailwind must not reach `src/content/`. A content script shares one cascade
+  with whatever page it is injected into, so it styles itself through a single
+  scoped attribute instead.
 
 ## Workflow
 
