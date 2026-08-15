@@ -44,7 +44,7 @@
       .wrap { max-width: 1160px; margin: 0 auto; padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 5rem; }
 
       header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
-      .wordmark { font-family: var(--mono); font-weight: 600; font-size: clamp(1.3rem, 3vw, 1.7rem); letter-spacing: -0.01em; margin: 0; }
+      .wordmark { font-family: var(--font-mono); font-weight: 600; font-size: clamp(1.3rem, 3vw, 1.7rem); letter-spacing: -0.01em; margin: 0; }
       .wordmark b { color: rgb(var(--accent)); font-weight: 600; }
       .tagline { margin: 0.35rem 0 0; color: rgb(var(--text-secondary)); max-width: 58ch; font-size: 0.95rem; }
 
@@ -167,7 +167,7 @@
       .theme-row[aria-pressed="true"] { border-color: rgb(var(--accent)); background: rgb(var(--accent) / 0.1); }
       .swatch { width: 1.7rem; height: 1.2rem; border-radius: var(--radius-sm); border: 1px solid rgb(var(--border)); flex: none; overflow: hidden; display: flex; }
       .swatch i { flex: 1; display: block; }
-      .theme-row .meta { min-width: 0; }
+      .theme-row .meta { min-width: 0; display: flex; flex-direction: column; }
       .theme-row .tname { font-family: var(--font-mono); font-size: 0.78rem; }
       .theme-row .tdesc { font-size: 0.68rem; color: rgb(var(--text-muted)); }
       .theme-row .check { margin-left: auto; color: rgb(var(--accent)); }
@@ -266,10 +266,11 @@
     </div>
 
     <script src="registry.js"></script>
-    <script type="module">
-      import { ALL_THEMES, VAR_MAP } from "../node_modules/@codellyson/justui/dist/index.js";
+    <script>
       (function () {
         var REG = window.SCAFFOLD_REGISTRY || { templates: [], features: [] };
+        var ALL_THEMES = window.JUSTUI_THEMES || [];
+        var VAR_MAP = window.JUSTUI_VAR_MAP || {};
         var NAME_RE = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 
         // Themes come from justui. The catalog follows the selected template:
