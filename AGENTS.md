@@ -79,11 +79,35 @@ test/          generator tests
 ```sh
 npm run dev -- new my-app -t api -f auth -y   # generate from source
 npm test                                       # generator tests
+npm run gen:web                                # rebuild web/registry.js
 ```
 
 When changing a template or feature, generate a project and actually build it.
 The test suite checks output shape — tokens substituted, anchors stripped,
 package.json merged — but does not run `npm install` and `tsc` on the result.
+
+### The builder page
+
+`web/` is the static builder. It is two files: `index.html`, and a generated
+`registry.js` that `scripts/gen-web.ts` produces by running the real engine
+into temp dirs — so the page describes what the templates actually emit rather
+than a hand-written account of them.
+
+`registry.js` is **not committed**. Deploying `web/` therefore needs a build
+step; publishing the directory straight from a checkout serves a page whose
+every dynamic panel is empty, and nothing on it says why:
+
+```sh
+npm ci && npm run gen:web    # build command
+web                          # publish directory
+```
+
+The page reads `window.SCAFFOLD_REGISTRY`, `window.JUSTUI_VAR_MAP` and
+`window.JUSTUI_THEMES` as plain globals from a classic script. It must not
+import anything at runtime — a deploy has no `node_modules` beside it, so a
+bare or relative specifier 404s, the script never runs, and the page silently
+falls back to its static markup. `test/web.test.ts` asserts the generator and
+the page still agree on those three names.
 
 ## When in doubt
 

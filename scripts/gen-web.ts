@@ -123,8 +123,8 @@ async function buildRegistry() {
   return { templates, features };
 }
 
-// justui is a local file: devDependency, so the page can't import it at
-// runtime — a deployed web/ has no node_modules next to it. Bake the themes in.
+// The page can't import justui at runtime — a deployed web/ has no
+// node_modules beside it — so the themes are baked in here instead.
 function buildThemes() {
   const consumer = new Set(CONSUMER_THEMES.map((t) => t.id));
   return ALL_THEMES.map((t) => ({

@@ -30,7 +30,7 @@
     "citty": "^0.1.6"
   },
   "devDependencies": {
-    "@codellyson/justui": "file:../justui",
+    "@codellyson/justui": "^1.0.2",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
