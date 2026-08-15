@@ -93,14 +93,28 @@ package.json merged — but does not run `npm install` and `tsc` on the result.
 into temp dirs — so the page describes what the templates actually emit rather
 than a hand-written account of them.
 
-`registry.js` is **not committed**. Deploying `web/` therefore needs a build
-step; publishing the directory straight from a checkout serves a page whose
-every dynamic panel is empty, and nothing on it says why:
+`registry.js` is **not committed**. Publishing the directory straight from a
+checkout serves a page whose every dynamic panel is empty, and nothing on it
+says why — so the deploy has to build first:
 
 ```sh
-npm ci && npm run gen:web    # build command
+npm ci && npm run gen:web    # build
 web                          # publish directory
 ```
+
+`.github/workflows/deploy.yml` does exactly that and uploads the result to
+Cloudflare Pages on every push to `main` that touches the page or what it is
+generated from. It deploys by direct upload rather than through Cloudflare's
+git integration on purpose: that integration can only be given a build command
+from the dashboard, which would leave a load-bearing step outside the repo and
+invisible to review.
+
+It needs `CLOUDFLARE_API_TOKEN` (scoped `Cloudflare Pages: Edit`) and
+`CLOUDFLARE_ACCOUNT_ID` as repository secrets. Without them the page is still
+built — so a break in generation is still caught — and the upload is skipped
+with a warning rather than failing. If the Pages project is also connected to
+this repo through the dashboard, disconnect it; two deploy paths to one project
+race, and the dashboard one has no build step.
 
 The page reads `window.SCAFFOLD_REGISTRY`, `window.JUSTUI_VAR_MAP` and
 `window.JUSTUI_THEMES` as plain globals from a classic script. It must not
