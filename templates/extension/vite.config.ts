@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -6,7 +7,7 @@ import { defineConfig } from "vite";
 // here may carry a content hash — a hashed filename loads fine in a browser
 // tab and then fails to resolve the moment Chrome reads the manifest.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },

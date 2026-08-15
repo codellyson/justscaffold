@@ -313,11 +313,11 @@ describe("extension", () => {
 
   // The popup renders inside the extension's own origin; the content script
   // renders inside somebody else's page. Tailwind may only reach the first.
-  it("keeps the content script out of the Tailwind content globs", async () => {
+  // v4 discovers sources by scanning rather than from a `content` list, so the
+  // exclusion is an @source rule in the stylesheet, not an absent glob.
+  it("keeps the content script out of Tailwind's source scan", async () => {
     const dir = await generate("extension", []);
-    const tailwind = await read(dir, "tailwind.config.cjs");
-    expect(tailwind).toContain("./src/popup/**/*.{ts,tsx}");
-    expect(tailwind).not.toContain("./src/**/*.{ts,tsx}");
+    expect(await read(dir, "src/styles/global.css")).toContain('@source not "../content"');
     expect(await read(dir, "src/content/index.ts")).not.toContain("global.css");
   });
 

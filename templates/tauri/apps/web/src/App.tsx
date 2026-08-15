@@ -48,7 +48,7 @@ export function App() {
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-sm border border-border bg-bg px-3 py-2 font-mono text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+            className="rounded-sm border border-border bg-bg px-3 py-2 font-mono text-primary focus:outline-hidden focus:ring-2 focus:ring-accent"
           />
           <Button onClick={onGreet} disabled={!isTauri}>
             Greet

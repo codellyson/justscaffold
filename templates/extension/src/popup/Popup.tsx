@@ -68,7 +68,7 @@ export function Popup() {
         <Switch
           checked={highlight}
           disabled={pending}
-          onCheckedChange={toggle}
+          onChange={toggle}
           aria-label="Outline links"
         />
       </div>

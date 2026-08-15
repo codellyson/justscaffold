@@ -137,7 +137,7 @@ export function Marketplace() {
               <circle cx="11" cy="11" r="7" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <input placeholder="Search for anything" className="w-full bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted" />
+            <input placeholder="Search for anything" className="w-full bg-transparent px-3 py-2.5 text-sm outline-hidden placeholder:text-muted" />
           </div>
           <nav className="hidden items-center gap-4 text-sm text-secondary md:flex">
             <a href="#" className="hover:text-primary">Sign in</a>

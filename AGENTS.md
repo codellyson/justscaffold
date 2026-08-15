@@ -63,7 +63,16 @@ test/          generator tests
   bumps the pair together — same problem Tauri has with three files.
 - Tailwind must not reach `src/content/`. A content script shares one cascade
   with whatever page it is injected into, so it styles itself through a single
-  scoped attribute instead.
+  scoped attribute instead. Tailwind v4 scans the project instead of reading a
+  `content` list, so the exclusion is an explicit `@source not "../content"` in
+  `src/styles/global.css` — deleting that line silently restyles every page the
+  extension is injected into.
+- The three React templates style themselves by importing
+  `@codellyson/justui/tailwind.css`, which pulls in the tokens, Tailwind, the
+  design config, and an `@source` over justui's `dist`. There is no
+  `tailwind.config.cjs` or `postcss.config.cjs`; Tailwind runs through
+  `@tailwindcss/vite`. justui ≥1.0 requires Tailwind v4 and no longer ships the
+  v3 preset.
 
 ## Workflow
 

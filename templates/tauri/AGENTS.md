@@ -19,8 +19,11 @@ A local-first Tauri desktop app in the "just" style: calm, tokenized, own-your-d
 
 ## Sharp edges
 
-- The justui Tailwind preset needs its `dist/**/*.js` in the content globs
-  (`apps/web/tailwind.config.cjs`) or `ThemeToggle`/`Button` ship unstyled.
+- Styling is Tailwind v4, configured in CSS. `apps/web/src/styles/global.css`
+  imports `@codellyson/justui/tailwind.css`, which carries the tokens, the
+  design config and an `@source` over the package's own `dist`. Dropping that
+  import for a bare `@import "tailwindcss"` ships `ThemeToggle`/`Button`
+  unstyled — their classes live in the package, not in this app.
 - `apps/web` runs on a fixed strict port (3030) — Tauri points its webview there.
 - `isTauri` (`apps/web/src/lib/runtime.ts`) is the only surface check. Keep the
   set of files that read it small; everything else goes through `commands.ts`.

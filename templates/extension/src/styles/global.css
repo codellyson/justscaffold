@@ -1,8 +1,12 @@
-@import "@codellyson/justui/tokens.css";
+/* One import: justui's tokens, Tailwind itself, the design config, and an
+   @source over the package's dist so its component classes survive the scan. */
+@import "@codellyson/justui/tailwind.css";
 @import "@fontsource-variable/geist";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+/* v4 discovers sources by scanning the project rather than from a `content`
+   list, so the content script has to be excluded by name — it shares a cascade
+   with whatever page it is injected into and styles itself inline instead. */
+@source not "../content";
 
 :root {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
