@@ -32,23 +32,43 @@ jobs:
 
   # Guards the thing unit tests can't: that a generated project actually
   # installs and compiles. Matrixed so a break points at one template.
+  #
+  # `pm` is the package manager the generated project expects, not a
+  # preference: the tauri and web templates are pnpm workspaces whose scripts
+  # shell out to `pnpm -r`, so running them under npm dies with
+  # "pnpm: not found" long before anything template-specific is exercised.
   generated:
     runs-on: ubuntu-latest
     needs: build
+    env:
+      # corepack fetches the pnpm pinned by the generated project's
+      # packageManager field, and prompts for confirmation unless told not to.
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
     strategy:
       fail-fast: false
       matrix:
         include:
           - template: lib
             features: vitest,github-actions,release-script
+            pm: npm
           - template: cli
             features: vitest,github-actions
+            pm: npm
           - template: mcp
             features: vitest,docker
+            pm: npm
           - template: api
             features: auth,vitest,docker,github-actions
+            pm: npm
+          - template: extension
+            features: vitest,github-actions,release-script
+            pm: npm
+          - template: web
+            features: github-actions,release-script
+            pm: pnpm
           - template: tauri
             features: github-actions,release-script
+            pm: pnpm
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +76,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Enable corepack
+        if: matrix.pm == 'pnpm'
+        run: corepack enable
 
       # Tauri's Rust side needs GTK/webkit headers to compile on Linux. Without
       # these the job dies inside a C build with an error that looks nothing
@@ -78,9 +102,11 @@ jobs:
       - name: Install and build the generated project
         working-directory: /tmp/sample
         run: |
-          npm install
-          npm run build
-          npm test --if-present
+          ${{ matrix.pm }} install
+          ${{ matrix.pm }} run build
+          # --if-present leads the script name: pnpm only reads it as a flag
+          # there, and forwards it as a script argument if it trails.
+          ${{ matrix.pm }} run --if-present test
 
       # cargo check, not build: it catches the type and borrow errors that
       # template drift actually produces, without paying for codegen.
