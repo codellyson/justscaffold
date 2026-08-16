@@ -102,19 +102,25 @@ npm ci && npm run gen:web    # build
 web                          # publish directory
 ```
 
-`.github/workflows/deploy.yml` does exactly that and uploads the result to
-Cloudflare Pages on every push to `main` that touches the page or what it is
-generated from. It deploys by direct upload rather than through Cloudflare's
-git integration on purpose: that integration can only be given a build command
-from the dashboard, which would leave a load-bearing step outside the repo and
-invisible to review.
+The site is a **Worker serving only static assets**, not a Pages project —
+`wrangler.jsonc` configures it, and it has no `main` because there is no script.
+The Worker is named `justscaffold`; that name is what binds the config to the
+existing Worker and its custom domain, so renaming it deploys a second Worker
+and leaves the domain on the old one.
 
-It needs `CLOUDFLARE_API_TOKEN` (scoped `Cloudflare Pages: Edit`) and
+`.github/workflows/deploy.yml` builds and runs `wrangler deploy` on every push
+to `main` that touches the page or what it is generated from. Deploying from
+here rather than through Cloudflare's git integration is deliberate: that
+integration takes its build command from the dashboard, which would leave a
+load-bearing step outside the repo and invisible to review.
+
+It needs `CLOUDFLARE_API_TOKEN` (`Workers Scripts: Edit`) and
 `CLOUDFLARE_ACCOUNT_ID` as repository secrets. Without them the page is still
-built — so a break in generation is still caught — and the upload is skipped
-with a warning rather than failing. If the Pages project is also connected to
-this repo through the dashboard, disconnect it; two deploy paths to one project
-race, and the dashboard one has no build step.
+built — so a break in generation is still caught — and the deploy is skipped
+with a warning rather than failing. If the Worker is also connected to this repo
+through Workers Builds, disconnect it: two deploy paths to one Worker race, and
+the dashboard one has no build step, so it republishes the empty page over a
+good deploy.
 
 The page reads `window.SCAFFOLD_REGISTRY`, `window.JUSTUI_VAR_MAP` and
 `window.JUSTUI_THEMES` as plain globals from a classic script. It must not

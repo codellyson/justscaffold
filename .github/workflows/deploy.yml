@@ -1,12 +1,13 @@
-# Deploys the builder page to Cloudflare Pages.
+# Deploys the builder page — a Worker serving only static assets, configured in
+# wrangler.jsonc.
 #
 # web/registry.js is generated, not committed, so the site cannot be published
-# straight from a checkout — `web/` on its own is an index.html whose every
-# dynamic panel renders empty. Cloudflare's git integration can only be told to
-# run a build from the dashboard, which puts a load-bearing step outside the
-# repo; deploying by direct upload from here keeps it in version control.
+# straight from a checkout: `web/` on its own is an index.html whose registry.js
+# 404s and whose every dynamic panel renders empty. The build has to run first,
+# and running it here keeps that step in version control rather than in a
+# dashboard build command nobody reviews.
 #
-# Requires CLOUDFLARE_API_TOKEN (Cloudflare Pages: Edit) and
+# Requires CLOUDFLARE_API_TOKEN (Workers Scripts: Edit) and
 # CLOUDFLARE_ACCOUNT_ID as repository secrets. Until both are set the deploy
 # step is skipped rather than failed, so this cannot redden CI on its own.
 name: Deploy
@@ -21,12 +22,13 @@ on:
       - scripts/gen-web.ts
       - package.json
       - package-lock.json
+      - wrangler.jsonc
       - .github/workflows/deploy.yml
   workflow_dispatch:
 
 # A queued deploy should replace an in-flight one, never race it.
 concurrency:
-  group: deploy-pages
+  group: deploy-worker
   cancel-in-progress: true
 
 permissions:
@@ -55,13 +57,13 @@ jobs:
       - name: Fail if the build produced nothing
         run: test -s web/registry.js
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy the Worker
         if: env.CONFIGURED == 'true'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web --project-name=justscaffold --branch=main
+          command: deploy
 
       - name: Explain the skip
         if: env.CONFIGURED != 'true'
