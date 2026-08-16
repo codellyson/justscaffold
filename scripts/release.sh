@@ -41,11 +41,12 @@ if [ "$ASSUME_YES" -eq 0 ]; then
   [[ "$reply" =~ ^[Yy]$ ]] || die "aborted"
 fi
 
-# -i.bak keeps this portable across BSD (macOS) and GNU sed.
-sed -i.bak -E "s/\"version\": \"$CURRENT\"/\"version\": \"$VERSION\"/" package.json
-rm -f package.json.bak
+# npm version, not sed: the version also lives in package-lock.json (twice), and
+# editing only package.json leaves the lock behind to surface later as a
+# spurious diff on someone else's install.
+npm version "$VERSION" --no-git-tag-version >/dev/null
 
-git add package.json
+git add package.json package-lock.json
 git commit -m "chore(release): v$VERSION"
 git tag "v$VERSION"
 git push origin main
