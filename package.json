@@ -1,6 +1,6 @@
 {
   "name": "justscaffold",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Scaffold apps from composable templates and opt-in feature modules.",
   "type": "module",
   "license": "MIT",
