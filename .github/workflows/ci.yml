@@ -19,7 +19,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm install
+        run: npm ci
 
       - name: Typecheck
         run: npm run lint
@@ -93,7 +93,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.template == 'tauri'
 
-      - run: npm install
+      - run: npm ci
       - run: npm run build
 
       - name: Generate
